@@ -36,7 +36,22 @@ export default function DAOPage({ navigate }) {
       for (let i = Number(count); i >= 1; i--) {
         const p = await contracts.disputeDAO.getProposal(i);
         const myVote = await contracts.disputeDAO.getVote(i, account);
-        all.push({ ...p, myVote });
+        
+        // Fix: Explicitly map the properties instead of using { ...p }
+        all.push({
+          id: p.id,
+          vin: p.vin,
+          proposer: p.proposer,
+          description: p.description,
+          stakedAmount: p.stakedAmount,
+          votesFor: p.votesFor,
+          votesAgainst: p.votesAgainst,
+          startTime: p.startTime,
+          endTime: p.endTime,
+          status: p.status,
+          rewardsDistributed: p.rewardsDistributed,
+          myVote
+        });
       }
       setProposals(all);
     } catch (err) {

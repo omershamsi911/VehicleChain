@@ -31,6 +31,8 @@ export default function VehicleDetails({ vin: propVin, navigate }) {
       const v = await contracts.vehicleRegistry.getVehicle(targetVin);
       setVehicle(v);
 
+      console.log(v)
+
       const [hist, firList, txIds] = await Promise.all([
         contracts.vehicleHistory.getHistory(targetVin),
         contracts.theftReport.getAllFIRs(targetVin),
