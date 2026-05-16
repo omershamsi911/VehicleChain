@@ -2,21 +2,410 @@
 import React, { useState, useEffect } from "react";
 import { useWeb3 } from "../utils/Web3Context";
 
-const RECORD_LABELS = { 0: "SERVICE", 1: "ACCIDENT", 2: "MILEAGE" };
-const RECORD_COLORS = { 0: "blue", 1: "red", 2: "amber" };
-const RECORD_ICONS  = { 0: "🔧", 1: "💥", 2: "📏" };
+const RECORD_LABELS  = { 0: "SERVICE", 1: "ACCIDENT", 2: "MILEAGE" };
+const RECORD_ICONS   = { 0: "🔧", 1: "💥", 2: "📏" };
 const TRANSFER_STATUS = ["PENDING", "APPROVED", "CANCELLED", "COMPLETED"];
 
+// ─── Style objects ────────────────────────────────────────────────────────────
+const S = {
+  page: {
+    padding: "48px 40px",
+    background: "var(--bg)",
+    minHeight: "100%",
+  },
+
+  microLabel: {
+    display: "block",
+    fontFamily: "var(--font-mono)",
+    fontSize: 10,
+    fontWeight: 600,
+    letterSpacing: "0.18em",
+    textTransform: "uppercase",
+    color: "var(--text-muted)",
+    marginBottom: 10,
+  },
+
+  pageTitle: {
+    fontFamily: "var(--font-serif)",
+    fontSize: 34,
+    fontWeight: 700,
+    color: "var(--text)",
+    margin: "0 0 6px 0",
+    lineHeight: 1.15,
+  },
+
+  pageSub: {
+    fontFamily: "var(--font-mono)",
+    fontSize: 12,
+    color: "var(--text-muted)",
+    margin: "0 0 40px 0",
+    letterSpacing: "0.06em",
+  },
+
+  card: {
+    background: "var(--surface)",
+    border: "1px solid var(--border)",
+    padding: 32,
+    marginBottom: 24,
+  },
+
+  cardTitle: {
+    fontFamily: "var(--font-serif)",
+    fontSize: 17,
+    fontWeight: 700,
+    color: "var(--text)",
+    marginBottom: 24,
+    paddingBottom: 14,
+    borderBottom: "1px solid var(--border)",
+  },
+
+  grid2: {
+    display: "grid",
+    gridTemplateColumns: "repeat(2, 1fr)",
+    gap: 32,
+  },
+
+  // ── Stolen banner ──
+  stolenBanner: {
+    display: "flex",
+    alignItems: "center",
+    gap: 20,
+    padding: "20px 28px",
+    background: "var(--bg-inverted)",
+    border: "1px solid rgba(255,80,80,0.4)",
+    marginBottom: 24,
+  },
+
+  stolenBannerIcon: {
+    fontSize: 32,
+    flexShrink: 0,
+  },
+
+  stolenBannerTitle: {
+    fontFamily: "var(--font-mono)",
+    fontSize: 12,
+    fontWeight: 700,
+    letterSpacing: "0.1em",
+    textTransform: "uppercase",
+    color: "#FF6B6B",
+    marginBottom: 4,
+  },
+
+  stolenBannerSub: {
+    fontFamily: "var(--font-sans)",
+    fontSize: 13,
+    color: "rgba(255,255,255,0.6)",
+  },
+
+  // ── Field label ──
+  fieldLabel: {
+    display: "block",
+    fontFamily: "var(--font-mono)",
+    fontSize: 9,
+    fontWeight: 600,
+    letterSpacing: "0.14em",
+    textTransform: "uppercase",
+    color: "var(--text-muted)",
+    marginBottom: 6,
+  },
+
+  fieldValue: {
+    fontFamily: "var(--font-mono)",
+    fontSize: 14,
+    color: "var(--text)",
+    marginBottom: 20,
+    lineHeight: 1.4,
+    wordBreak: "break-all",
+  },
+
+  fieldValueSans: {
+    fontFamily: "var(--font-sans)",
+    fontSize: 15,
+    color: "var(--text)",
+    marginBottom: 20,
+    lineHeight: 1.4,
+  },
+
+  // ── Buttons ──
+  btnPrimary: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 10,
+    background: "var(--bg-inverted)",
+    border: "none",
+    borderRadius: 999,
+    color: "var(--text-inv)",
+    fontFamily: "var(--font-sans)",
+    fontSize: 11,
+    fontWeight: 700,
+    textTransform: "uppercase",
+    letterSpacing: "0.07em",
+    padding: "10px 18px",
+    cursor: "pointer",
+    whiteSpace: "nowrap",
+  },
+
+  btnDanger: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 8,
+    background: "var(--bg-inverted)",
+    border: "1px solid rgba(255,80,80,0.4)",
+    borderRadius: 999,
+    color: "#FF6B6B",
+    fontFamily: "var(--font-sans)",
+    fontSize: 11,
+    fontWeight: 700,
+    textTransform: "uppercase",
+    letterSpacing: "0.07em",
+    padding: "9px 16px",
+    cursor: "pointer",
+    whiteSpace: "nowrap",
+  },
+
+  btnGhost: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 8,
+    background: "transparent",
+    border: "1px solid var(--border)",
+    borderRadius: 999,
+    color: "var(--text-muted)",
+    fontFamily: "var(--font-sans)",
+    fontSize: 11,
+    fontWeight: 600,
+    textTransform: "uppercase",
+    letterSpacing: "0.07em",
+    padding: "9px 16px",
+    cursor: "pointer",
+    whiteSpace: "nowrap",
+  },
+
+  btnSmGhost: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 6,
+    background: "transparent",
+    border: "1px solid var(--border)",
+    borderRadius: 999,
+    color: "var(--text-muted)",
+    fontFamily: "var(--font-mono)",
+    fontSize: 10,
+    fontWeight: 600,
+    textTransform: "uppercase",
+    letterSpacing: "0.06em",
+    padding: "5px 12px",
+    cursor: "pointer",
+    whiteSpace: "nowrap",
+  },
+
+  arrowBadgeDark: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: 24, height: 24,
+    background: "var(--accent)",
+    borderRadius: "50%",
+    color: "var(--text)",
+    fontSize: 12,
+    flexShrink: 0,
+  },
+
+  // ── Alerts ──
+  alertError: {
+    padding: "14px 20px",
+    background: "rgba(204,34,34,0.06)",
+    border: "1px solid rgba(204,34,34,0.2)",
+    fontFamily: "var(--font-sans)",
+    fontSize: 13,
+    color: "#CC2222",
+    marginBottom: 24,
+    lineHeight: 1.5,
+  },
+
+  alertWarn: {
+    padding: "14px 20px",
+    background: "rgba(255,170,0,0.08)",
+    border: "1px solid rgba(255,170,0,0.3)",
+    fontFamily: "var(--font-mono)",
+    fontSize: 12,
+    color: "var(--text)",
+    marginBottom: 24,
+  },
+
+  // ── Badges ──
+  badgeGreen: {
+    display: "inline-flex", alignItems: "center",
+    fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 600,
+    letterSpacing: "0.1em", textTransform: "uppercase",
+    color: "#1A7A4A", background: "rgba(26,122,74,0.08)",
+    border: "1px solid rgba(26,122,74,0.2)",
+    padding: "4px 10px", borderRadius: 999,
+  },
+  badgeRed: {
+    display: "inline-flex", alignItems: "center",
+    fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 600,
+    letterSpacing: "0.1em", textTransform: "uppercase",
+    color: "#CC2222", background: "rgba(204,34,34,0.08)",
+    border: "1px solid rgba(204,34,34,0.2)",
+    padding: "4px 10px", borderRadius: 999,
+  },
+  badgeAmber: {
+    display: "inline-flex", alignItems: "center",
+    fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 600,
+    letterSpacing: "0.1em", textTransform: "uppercase",
+    color: "#92600A", background: "rgba(146,96,10,0.08)",
+    border: "1px solid rgba(146,96,10,0.2)",
+    padding: "4px 10px", borderRadius: 999,
+  },
+  badgeBlue: {
+    display: "inline-flex", alignItems: "center",
+    fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 600,
+    letterSpacing: "0.1em", textTransform: "uppercase",
+    color: "#1A4A8A", background: "rgba(26,74,138,0.08)",
+    border: "1px solid rgba(26,74,138,0.2)",
+    padding: "4px 10px", borderRadius: 999,
+  },
+  badgePurple: {
+    display: "inline-flex", alignItems: "center",
+    fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 600,
+    letterSpacing: "0.1em", textTransform: "uppercase",
+    color: "#6B3FA0", background: "rgba(107,63,160,0.08)",
+    border: "1px solid rgba(107,63,160,0.2)",
+    padding: "4px 10px", borderRadius: 999,
+  },
+
+  // ── Timeline ──
+  timeline: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 0,
+  },
+
+  timelineItem: {
+    display: "flex",
+    flexDirection: "column",
+    paddingLeft: 24,
+    paddingBottom: 24,
+    borderLeft: "1px solid var(--border)",
+    position: "relative",
+    marginLeft: 8,
+  },
+
+  timelineDot: (color) => ({
+    position: "absolute",
+    left: -5,
+    top: 2,
+    width: 8,
+    height: 8,
+    borderRadius: "50%",
+    background: color,
+    border: "2px solid var(--surface)",
+    flexShrink: 0,
+  }),
+
+  timelineDesc: {
+    fontFamily: "var(--font-sans)",
+    fontSize: 13,
+    color: "var(--text)",
+    lineHeight: 1.6,
+    margin: "6px 0 4px",
+  },
+
+  timelineMeta: {
+    fontFamily: "var(--font-mono)",
+    fontSize: 11,
+    color: "var(--text-muted)",
+    letterSpacing: "0.04em",
+  },
+
+  // ── Table ──
+  tableWrap: { overflowX: "auto" },
+
+  table: {
+    width: "100%",
+    borderCollapse: "collapse",
+    fontFamily: "var(--font-sans)",
+    fontSize: 13,
+  },
+
+  th: {
+    fontFamily: "var(--font-mono)",
+    fontSize: 9,
+    fontWeight: 600,
+    letterSpacing: "0.14em",
+    textTransform: "uppercase",
+    color: "var(--text-muted)",
+    padding: "0 16px 12px 0",
+    borderBottom: "1px solid var(--border)",
+    textAlign: "left",
+    whiteSpace: "nowrap",
+  },
+
+  td: {
+    padding: "14px 16px 14px 0",
+    borderBottom: "1px solid var(--border)",
+    color: "var(--text)",
+    verticalAlign: "middle",
+    fontFamily: "var(--font-mono)",
+    fontSize: 12,
+  },
+
+  // ── Empty state ──
+  emptyState: { textAlign: "center", padding: "48px 24px" },
+  emptyIcon:  { fontSize: 40, marginBottom: 16, opacity: 0.3 },
+  emptyText:  {
+    fontFamily: "var(--font-sans)", fontSize: 14,
+    color: "var(--text-muted)", marginBottom: 24,
+  },
+
+  mono: {
+    fontFamily: "var(--font-mono)",
+    fontSize: 12,
+    color: "var(--text-muted)",
+  },
+};
+
+const DOT_COLOR = {
+  blue:   "#1A4A8A",
+  red:    "#CC2222",
+  amber:  "#92600A",
+  green:  "#1A7A4A",
+};
+
+const RECORD_BADGE = {
+  0: S.badgeBlue,
+  1: S.badgeRed,
+  2: S.badgeAmber,
+};
+
+// ─── Spinner ──────────────────────────────────────────────────────────────────
+function Spinner() {
+  return (
+    <span style={{
+      width: 16, height: 16,
+      borderRadius: "50%",
+      border: "2px solid rgba(0,0,0,0.08)",
+      borderTopColor: "currentColor",
+      display: "inline-block",
+      animation: "spin 0.7s linear infinite",
+      flexShrink: 0,
+    }} />
+  );
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
 export default function VehicleDetails({ vin: propVin, navigate }) {
   const { contracts, account, isConnected, shortAddress } = useWeb3();
-  const [vin,      setVin]      = useState(propVin || "");
-  const [vehicle,  setVehicle]  = useState(null);
-  const [history,  setHistory]  = useState([]);
-  const [firs,     setFirs]     = useState([]);
+
+  const [vin,       setVin]       = useState(propVin || "");
+  const [vehicle,   setVehicle]   = useState(null);
+  const [history,   setHistory]   = useState([]);
+  const [firs,      setFirs]      = useState([]);
   const [transfers, setTransfers] = useState([]);
-  const [loading,  setLoading]  = useState(false);
-  const [error,    setError]    = useState("");
-  const [searched, setSearched] = useState(!!propVin);
+  const [loading,   setLoading]   = useState(false);
+  const [error,     setError]     = useState("");
+  const [searched,  setSearched]  = useState(!!propVin);
 
   useEffect(() => {
     if (propVin && isConnected && contracts.vehicleRegistry) {
@@ -31,7 +420,7 @@ export default function VehicleDetails({ vin: propVin, navigate }) {
       const v = await contracts.vehicleRegistry.getVehicle(targetVin);
       setVehicle(v);
 
-      console.log(v)
+      console.log(v);
 
       const [hist, firList, txIds] = await Promise.all([
         contracts.vehicleHistory.getHistory(targetVin),
@@ -68,141 +457,175 @@ export default function VehicleDetails({ vin: propVin, navigate }) {
     vehicle.owner?.toLowerCase() === account?.toLowerCase();
 
   return (
-    <div>
-      <div className="page-header">
-        <h1 className="page-title">🚗 Vehicle Details</h1>
-        <p className="page-sub">Full immutable history, ownership & FIR status</p>
+    <div style={S.page}>
+
+      {/* ── Page Header ── */}
+      <div style={{ marginBottom: 40 }}>
+        <span style={S.microLabel}>Immutable · On-Chain Record</span>
+        <h1 style={S.pageTitle}>Vehicle Details</h1>
+        <p style={S.pageSub}>Full immutable history, ownership &amp; FIR status</p>
       </div>
 
-      {/* VIN Search */}
-      <div className="card" style={{ marginBottom: 24 }}>
+      {/* ── VIN Search ── */}
+      <div style={S.card}>
         <form onSubmit={handleSearch} style={{ display: "flex", gap: 12 }}>
           <input
-            className="input"
+            style={{
+              flex: 1,
+              padding: "12px 16px",
+              fontFamily: "var(--font-sans)",
+              fontSize: 14,
+              color: "var(--text)",
+              background: "var(--bg)",
+              border: "1px solid var(--border)",
+              borderBottom: "1px solid rgba(0,0,0,0.25)",
+              borderRadius: 0,
+              outline: "none",
+              boxSizing: "border-box",
+            }}
             placeholder="Enter VIN number"
             value={vin}
             onChange={(e) => setVin(e.target.value.toUpperCase())}
           />
-          <button type="submit" className="btn btn-primary" disabled={loading} style={{ whiteSpace: "nowrap" }}>
-            {loading ? <span className="spinner" /> : "🔍 Lookup"}
+          <button type="submit" style={S.btnPrimary} disabled={loading}>
+            {loading ? <><Spinner /> Searching…</> : <>🔍 Lookup <span style={S.arrowBadgeDark}>→</span></>}
           </button>
         </form>
       </div>
 
-      {error && <div className="alert alert-error">⚠ {error}</div>}
+      {error && <div style={S.alertError}>⚠ {error}</div>}
 
       {vehicle && (
         <>
-          {/* Stolen Banner */}
+          {/* ── Stolen Banner ── */}
           {vehicle.isStolen && (
-            <div className="stolen-banner">
-              <div className="stolen-banner-icon">🚨</div>
+            <div style={S.stolenBanner}>
+              <div style={S.stolenBannerIcon}>🚨</div>
               <div>
-                <div className="stolen-banner-title">⚠ THIS VEHICLE IS REPORTED STOLEN</div>
-                <div className="stolen-banner-sub">Do not purchase this vehicle. Contact authorities.</div>
+                <div style={S.stolenBannerTitle}>⚠ THIS VEHICLE IS REPORTED STOLEN</div>
+                <div style={S.stolenBannerSub}>Do not purchase this vehicle. Contact authorities.</div>
               </div>
             </div>
           )}
 
-          {/* Vehicle Info */}
-          <div className="card" style={{ marginBottom: 20 }}>
-            <div className="card-title">Vehicle Information</div>
-            <div className="grid-2">
+          {/* ── Vehicle Info ── */}
+          <div style={S.card}>
+            <div style={S.cardTitle}>Vehicle Information</div>
+            <div style={S.grid2}>
               <div>
-                <div className="label">VIN</div>
-                <div style={{ fontFamily: "var(--mono)", fontSize: 15, marginBottom: 16 }}>{vehicle.vin}</div>
+                <span style={S.fieldLabel}>VIN</span>
+                <div style={S.fieldValue}>{vehicle.vin}</div>
 
-                <div className="label">Model</div>
-                <div style={{ fontSize: 15, marginBottom: 16 }}>{vehicle.model}</div>
+                <span style={S.fieldLabel}>Model</span>
+                <div style={S.fieldValueSans}>{vehicle.model}</div>
 
-                <div className="label">Year</div>
-                <div style={{ fontFamily: "var(--mono)", marginBottom: 16 }}>{vehicle.year?.toString()}</div>
+                <span style={S.fieldLabel}>Year</span>
+                <div style={S.fieldValue}>{vehicle.year?.toString()}</div>
               </div>
               <div>
-                <div className="label">Current Owner</div>
-                <div style={{ fontFamily: "var(--mono)", fontSize: 13, marginBottom: 16 }}>
+                <span style={S.fieldLabel}>Current Owner</span>
+                <div style={{ ...S.fieldValue, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                   {vehicle.owner}
-                  {isOwner && <span className="badge badge-blue" style={{ marginLeft: 8 }}>You</span>}
+                  {isOwner && <span style={S.badgeBlue}>You</span>}
                 </div>
 
-                <div className="label">Registered</div>
-                <div style={{ fontFamily: "var(--mono)", fontSize: 13, marginBottom: 16 }}>{fmtDate(vehicle.registeredAt)}</div>
+                <span style={S.fieldLabel}>Registered</span>
+                <div style={S.fieldValue}>{fmtDate(vehicle.registeredAt)}</div>
 
-                <div className="label">Status</div>
+                <span style={S.fieldLabel}>Status</span>
                 <div>
                   {vehicle.isStolen
-                    ? <span className="badge badge-red">🚨 STOLEN</span>
-                    : <span className="badge badge-green">✓ Clean Title</span>
+                    ? <span style={S.badgeRed}>🚨 STOLEN</span>
+                    : <span style={S.badgeGreen}>✓ Clean Title</span>
                   }
                 </div>
               </div>
             </div>
 
             {isOwner && (
-              <div style={{ marginTop: 16, display: "flex", gap: 10, flexWrap: "wrap" }}>
-                <button className="btn btn-primary btn-sm" onClick={() => navigate("transfer")}>⇄ Transfer Ownership</button>
-                <button className="btn btn-danger btn-sm"  onClick={() => navigate("theft")}>🚨 File FIR</button>
-                <button className="btn btn-ghost btn-sm"   onClick={() => navigate("history")}>📋 Add History</button>
+              <div style={{ marginTop: 24, paddingTop: 20, borderTop: "1px solid var(--border)", display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <button style={S.btnPrimary} onClick={() => navigate("transfer")}>
+                  <span>⇄ Transfer Ownership</span>
+                  <span style={S.arrowBadgeDark}>→</span>
+                </button>
+                <button style={S.btnDanger} onClick={() => navigate("theft")}>
+                  🚨 File FIR
+                </button>
+                <button
+                  style={S.btnGhost}
+                  onClick={() => navigate("history")}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(0,0,0,0.3)"; e.currentTarget.style.color = "var(--text)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text-muted)"; }}
+                >
+                  📋 Add History
+                </button>
               </div>
             )}
           </div>
 
-          {/* History Timeline */}
-          <div className="card" style={{ marginBottom: 20 }}>
-            <div className="card-title">📋 Vehicle History ({history.length} records)</div>
+          {/* ── History Timeline ── */}
+          <div style={S.card}>
+            <div style={S.cardTitle}>Vehicle History ({history.length} records)</div>
+
             {history.length === 0 ? (
-              <div className="empty-state">
-                <div className="empty-state-icon">📋</div>
-                <div className="empty-state-text">No history records yet</div>
+              <div style={S.emptyState}>
+                <div style={S.emptyIcon}>📋</div>
+                <p style={S.emptyText}>No history records yet</p>
               </div>
             ) : (
-              <div className="timeline">
-                {history.map((rec, i) => (
-                  <div key={i} className="timeline-item">
-                    <div className={`timeline-dot timeline-dot-${RECORD_COLORS[rec.recordType] || "blue"}`} />
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
-                      <span>{RECORD_ICONS[rec.recordType]}</span>
-                      <span className={`badge badge-${RECORD_COLORS[rec.recordType] || "blue"}`}>
-                        {RECORD_LABELS[rec.recordType]}
+              <div style={S.timeline}>
+                {history.map((rec, i) => {
+                  const colorKey = { 0: "blue", 1: "red", 2: "amber" }[rec.recordType] || "blue";
+                  return (
+                    <div key={i} style={S.timelineItem}>
+                      <div style={S.timelineDot(DOT_COLOR[colorKey])} />
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                        <span>{RECORD_ICONS[rec.recordType]}</span>
+                        <span style={RECORD_BADGE[rec.recordType] || S.badgeBlue}>
+                          {RECORD_LABELS[rec.recordType]}
+                        </span>
+                        {rec.mileage > 0 && (
+                          <span style={S.badgePurple}>{rec.mileage.toString()} km</span>
+                        )}
+                      </div>
+                      <p style={S.timelineDesc}>{rec.description}</p>
+                      <span style={S.timelineMeta}>
+                        {fmtDate(rec.timestamp)} · by {shortAddress(rec.addedBy)}
                       </span>
-                      {rec.mileage > 0 && (
-                        <span className="badge badge-purple">{rec.mileage.toString()} km</span>
-                      )}
                     </div>
-                    <div className="timeline-desc">{rec.description}</div>
-                    <div className="timeline-meta">
-                      {fmtDate(rec.timestamp)} · by {shortAddress(rec.addedBy)}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
 
-          {/* FIR Records */}
-          <div className="card" style={{ marginBottom: 20 }}>
-            <div className="card-title">🚨 FIR / Theft Reports ({firs.length})</div>
+          {/* ── FIR Records ── */}
+          <div style={S.card}>
+            <div style={S.cardTitle}>FIR / Theft Reports ({firs.length})</div>
+
             {firs.length === 0 ? (
-              <div className="empty-state">
-                <div className="empty-state-icon">✅</div>
-                <div className="empty-state-text">No theft reports on file</div>
+              <div style={S.emptyState}>
+                <div style={S.emptyIcon}>✅</div>
+                <p style={S.emptyText}>No theft reports on file</p>
               </div>
             ) : (
-              <div className="timeline">
+              <div style={S.timeline}>
                 {firs.map((fir, i) => (
-                  <div key={i} className="timeline-item">
-                    <div className={`timeline-dot ${fir.isResolved ? "timeline-dot-green" : "timeline-dot-red"}`} />
-                    <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 4 }}>
-                      <span className={`badge ${fir.isResolved ? "badge-green" : "badge-red"}`}>
+                  <div key={i} style={S.timelineItem}>
+                    <div style={S.timelineDot(fir.isResolved ? DOT_COLOR.green : DOT_COLOR.red)} />
+                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                      <span style={fir.isResolved ? S.badgeGreen : S.badgeRed}>
                         {fir.isResolved ? "✓ Recovered" : "🚨 Active FIR"}
                       </span>
                     </div>
-                    <div className="timeline-desc">{fir.details}</div>
-                    <div className="timeline-meta">Filed {fmtDate(fir.filedAt)} · by {shortAddress(fir.filedBy)}</div>
+                    <p style={S.timelineDesc}>{fir.details}</p>
+                    <span style={S.timelineMeta}>
+                      Filed {fmtDate(fir.filedAt)} · by {shortAddress(fir.filedBy)}
+                    </span>
                     {fir.isResolved && (
-                      <div className="timeline-meta" style={{ color: "var(--green)", marginTop: 4 }}>
+                      <span style={{ ...S.timelineMeta, color: "#1A7A4A", marginTop: 4, display: "block" }}>
                         Recovered: {fmtDate(fir.resolvedAt)} · {fir.resolutionNote}
-                      </div>
+                      </span>
                     )}
                   </div>
                 ))}
@@ -210,40 +633,46 @@ export default function VehicleDetails({ vin: propVin, navigate }) {
             )}
           </div>
 
-          {/* Transfer History */}
-          <div className="card">
-            <div className="card-title">⇄ Ownership Transfer History ({transfers.length})</div>
+          {/* ── Transfer History ── */}
+          <div style={S.card}>
+            <div style={S.cardTitle}>Ownership Transfer History ({transfers.length})</div>
+
             {transfers.length === 0 ? (
-              <div className="empty-state">
-                <div className="empty-state-icon">⇄</div>
-                <div className="empty-state-text">No transfers recorded</div>
+              <div style={S.emptyState}>
+                <div style={S.emptyIcon}>⇄</div>
+                <p style={S.emptyText}>No transfers recorded</p>
               </div>
             ) : (
-              <div className="table-wrap">
-                <table>
+              <div style={S.tableWrap}>
+                <table style={S.table}>
                   <thead>
                     <tr>
-                      <th>From</th>
-                      <th>To</th>
-                      <th>Status</th>
-                      <th>Price (ETH)</th>
-                      <th>Date</th>
+                      {["From", "To", "Status", "Price (ETH)", "Date"].map((h) => (
+                        <th key={h} style={S.th}>{h}</th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {transfers.map((tx, i) => (
-                      <tr key={i}>
-                        <td>{shortAddress(tx.seller)}</td>
-                        <td>{shortAddress(tx.buyer)}</td>
-                        <td>
-                          <span className={`badge badge-${tx.status === 3n ? "green" : tx.status === 2n ? "red" : "amber"}`}>
-                            {TRANSFER_STATUS[Number(tx.status)]}
-                          </span>
-                        </td>
-                        <td>{tx.price > 0n ? `${Number(tx.price) / 1e18} ETH` : "Gift"}</td>
-                        <td>{fmtDate(tx.initiatedAt)}</td>
-                      </tr>
-                    ))}
+                    {transfers.map((tx, i) => {
+                      const statusBadge = tx.status === 3n ? S.badgeGreen
+                                        : tx.status === 2n ? S.badgeRed
+                                        : S.badgeAmber;
+                      return (
+                        <tr key={i}>
+                          <td style={S.td}>{shortAddress(tx.seller)}</td>
+                          <td style={S.td}>{shortAddress(tx.buyer)}</td>
+                          <td style={S.td}>
+                            <span style={statusBadge}>
+                              {TRANSFER_STATUS[Number(tx.status)]}
+                            </span>
+                          </td>
+                          <td style={S.td}>
+                            {tx.price > 0n ? `${Number(tx.price) / 1e18} ETH` : "Gift"}
+                          </td>
+                          <td style={S.td}>{fmtDate(tx.initiatedAt)}</td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -253,9 +682,9 @@ export default function VehicleDetails({ vin: propVin, navigate }) {
       )}
 
       {searched && !vehicle && !loading && !error && (
-        <div className="empty-state">
-          <div className="empty-state-icon">🔍</div>
-          <div className="empty-state-text">Enter a VIN to look up vehicle details</div>
+        <div style={S.emptyState}>
+          <div style={S.emptyIcon}>🔍</div>
+          <p style={S.emptyText}>Enter a VIN to look up vehicle details</p>
         </div>
       )}
     </div>

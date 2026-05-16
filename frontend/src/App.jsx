@@ -1,7 +1,9 @@
 // src/App.jsx
 import React, { useState } from "react";
 import { Web3Provider } from "./utils/Web3Context";
+import { ThemeProvider } from "./utils/ThemeContext";
 import Navbar from "./components/Navbar";
+import Footer from "./components/Footer";
 import Dashboard from "./pages/Dashboard";
 import VehicleDetails from "./pages/VehicleDetails";
 import RegisterVehicle from "./pages/RegisterVehicle";
@@ -13,36 +15,40 @@ import TokenPage from "./pages/TokenPage";
 import "./App.css";
 
 export default function App() {
-  const [page,    setPage]    = useState("dashboard");
-  const [vinFocus, setVinFocus] = useState(null); // for deep-linking to vehicle details
+  const [page,     setPage]     = useState("dashboard");
+  const [vinFocus, setVinFocus] = useState(null);
 
   const navigate = (p, vin = null) => {
     setPage(p);
     if (vin) setVinFocus(vin);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const renderPage = () => {
     switch (page) {
-      case "dashboard":  return <Dashboard navigate={navigate} />;
-      case "vehicle":    return <VehicleDetails vin={vinFocus} navigate={navigate} />;
-      case "register":   return <RegisterVehicle navigate={navigate} />;
-      case "transfer":   return <TransferPage navigate={navigate} />;
-      case "theft":      return <TheftPage navigate={navigate} />;
-      case "history":    return <HistoryPage navigate={navigate} />;
-      case "dao":        return <DAOPage navigate={navigate} />;
-      case "token":      return <TokenPage navigate={navigate} />;
-      default:           return <Dashboard navigate={navigate} />;
+      case "dashboard": return <Dashboard       navigate={navigate} />;
+      case "vehicle":   return <VehicleDetails  vin={vinFocus} navigate={navigate} />;
+      case "register":  return <RegisterVehicle navigate={navigate} />;
+      case "transfer":  return <TransferPage    navigate={navigate} />;
+      case "theft":     return <TheftPage       navigate={navigate} />;
+      case "history":   return <HistoryPage     navigate={navigate} />;
+      case "dao":       return <DAOPage         navigate={navigate} />;
+      case "token":     return <TokenPage       navigate={navigate} />;
+      default:          return <Dashboard       navigate={navigate} />;
     }
   };
 
   return (
-    <Web3Provider>
-      <div className="app-root">
-        <Navbar navigate={navigate} currentPage={page} />
-        <main className="app-main">
-          {renderPage()}
-        </main>
-      </div>
-    </Web3Provider>
+    <ThemeProvider>
+      <Web3Provider>
+        <div className="app-root">
+          <Navbar navigate={navigate} currentPage={page} />
+          <main className="app-main">
+            {renderPage()}
+          </main>
+          <Footer navigate={navigate} />
+        </div>
+      </Web3Provider>
+    </ThemeProvider>
   );
 }
