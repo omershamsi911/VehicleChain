@@ -2,331 +2,29 @@
 import React, { useState, useEffect } from "react";
 import { ethers } from "ethers";
 import { useWeb3 } from "../utils/Web3Context";
+import S from "../styles/shared";
 
 const STATUS_LABELS = ["ACTIVE", "PASSED", "REJECTED", "EXECUTED", "CANCELLED"];
 const STATUS_ICONS  = ["🗳", "✅", "❌", "⚡", "🚫"];
+const STATUS_BADGE_STYLES = [
+  // active amber
+  { fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "#b45309", background: "rgba(217,119,6,0.08)", border: "1px solid rgba(217,119,6,0.20)", padding: "3px 9px", borderRadius: 999, display: "inline-flex", alignItems: "center", gap: 4 },
+  // passed green
+  { fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "#15803d", background: "rgba(22,163,74,0.10)", border: "1px solid rgba(22,163,74,0.25)", padding: "3px 9px", borderRadius: 999, display: "inline-flex", alignItems: "center", gap: 4 },
+  // rejected red
+  { fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "#dc2626", background: "rgba(220,38,38,0.08)", border: "1px solid rgba(220,38,38,0.20)", padding: "3px 9px", borderRadius: 999, display: "inline-flex", alignItems: "center", gap: 4 },
+  // executed blue
+  { fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "#1d4ed8", background: "rgba(29,78,216,0.07)", border: "1px solid rgba(29,78,216,0.18)", padding: "3px 9px", borderRadius: 999, display: "inline-flex", alignItems: "center", gap: 4 },
+  // cancelled muted
+  { fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--text-muted)", background: "var(--bg-secondary)", border: "1px solid var(--border)", padding: "3px 9px", borderRadius: 999, display: "inline-flex", alignItems: "center", gap: 4 },
+];
 
-// ─── Style objects ────────────────────────────────────────────────────────────
-const S = {
-  page: {
-    padding: "48px 40px",
-    background: "var(--bg)",
-    minHeight: "100%",
-  },
-
-  microLabel: {
-    display: "block",
-    fontFamily: "var(--font-mono)",
-    fontSize: 10,
-    fontWeight: 600,
-    letterSpacing: "0.18em",
-    textTransform: "uppercase",
-    color: "var(--text-muted)",
-    marginBottom: 10,
-  },
-
-  pageTitle: {
-    fontFamily: "var(--font-serif)",
-    fontSize: 34,
-    fontWeight: 700,
-    color: "var(--text)",
-    margin: "0 0 6px 0",
-    lineHeight: 1.15,
-  },
-
-  pageSub: {
-    fontFamily: "var(--font-mono)",
-    fontSize: 12,
-    color: "var(--text-muted)",
-    margin: "0 0 40px 0",
-    letterSpacing: "0.06em",
-  },
-
-  card: {
-    background: "var(--surface)",
-    border: "1px solid var(--border)",
-    padding: 32,
-    marginBottom: 24,
-  },
-
-  cardTitle: {
-    fontFamily: "var(--font-serif)",
-    fontSize: 17,
-    fontWeight: 700,
-    color: "var(--text)",
-    marginBottom: 24,
-    paddingBottom: 14,
-    borderBottom: "1px solid var(--border)",
-  },
-
-  grid2: {
-    display: "grid",
-    gridTemplateColumns: "repeat(2, 1fr)",
-    gap: 24,
-    marginBottom: 24,
-    alignItems: "start",
-  },
-
-  formGroup: {
-    marginBottom: 20,
-  },
-
-  label: {
-    display: "block",
-    fontFamily: "var(--font-mono)",
-    fontSize: 10,
-    fontWeight: 600,
-    letterSpacing: "0.14em",
-    textTransform: "uppercase",
-    color: "var(--text-muted)",
-    marginBottom: 8,
-  },
-
-  input: {
-    flex: 1,
-    padding: "12px 16px",
-    fontFamily: "var(--font-sans)",
-    fontSize: 14,
-    color: "var(--text)",
-    background: "var(--bg)",
-    border: "1px solid var(--border)",
-    borderBottom: "1px solid rgba(0,0,0,0.25)",
-    borderRadius: 0,
-    outline: "none",
-    boxSizing: "border-box",
-    width: "100%",
-  },
-
-  textarea: {
-    width: "100%",
-    padding: "12px 16px",
-    fontFamily: "var(--font-sans)",
-    fontSize: 14,
-    color: "var(--text)",
-    background: "var(--bg)",
-    border: "1px solid var(--border)",
-    borderBottom: "1px solid rgba(0,0,0,0.25)",
-    borderRadius: 0,
-    outline: "none",
-    boxSizing: "border-box",
-    resize: "vertical",
-  },
-
-  // ── Buttons ──
-  btnPrimary: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 10,
-    background: "var(--bg-inverted)",
-    border: "none",
-    borderRadius: 999,
-    color: "var(--text-inv)",
-    fontFamily: "var(--font-sans)",
-    fontSize: 11,
-    fontWeight: 700,
-    textTransform: "uppercase",
-    letterSpacing: "0.07em",
-    padding: "10px 18px",
-    cursor: "pointer",
-    whiteSpace: "nowrap",
-  },
-
-  btnAccent: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 10,
-    background: "var(--accent)",
-    border: "none",
-    borderRadius: 999,
-    color: "var(--text)",
-    fontFamily: "var(--font-sans)",
-    fontSize: 11,
-    fontWeight: 700,
-    textTransform: "uppercase",
-    letterSpacing: "0.07em",
-    padding: "10px 18px",
-    cursor: "pointer",
-    whiteSpace: "nowrap",
-  },
-
-  btnSuccess: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 8,
-    background: "rgba(26,122,74,0.08)",
-    border: "1px solid rgba(26,122,74,0.3)",
-    borderRadius: 999,
-    color: "#1A7A4A",
-    fontFamily: "var(--font-sans)",
-    fontSize: 11,
-    fontWeight: 700,
-    textTransform: "uppercase",
-    letterSpacing: "0.07em",
-    padding: "7px 14px",
-    cursor: "pointer",
-    whiteSpace: "nowrap",
-  },
-
-  btnDanger: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 8,
-    background: "var(--bg-inverted)",
-    border: "1px solid rgba(255,80,80,0.4)",
-    borderRadius: 999,
-    color: "#FF6B6B",
-    fontFamily: "var(--font-sans)",
-    fontSize: 11,
-    fontWeight: 700,
-    textTransform: "uppercase",
-    letterSpacing: "0.07em",
-    padding: "7px 14px",
-    cursor: "pointer",
-    whiteSpace: "nowrap",
-  },
-
-  btnGhost: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 8,
-    background: "transparent",
-    border: "1px solid var(--border)",
-    borderRadius: 999,
-    color: "var(--text-muted)",
-    fontFamily: "var(--font-sans)",
-    fontSize: 11,
-    fontWeight: 600,
-    textTransform: "uppercase",
-    letterSpacing: "0.07em",
-    padding: "7px 14px",
-    cursor: "pointer",
-    whiteSpace: "nowrap",
-  },
-
-  // ── Alerts ──
-  alertSuccess: {
-    padding: "14px 20px",
-    background: "rgba(26,122,74,0.06)",
-    border: "1px solid rgba(26,122,74,0.2)",
-    fontFamily: "var(--font-sans)",
-    fontSize: 13,
-    color: "#1A7A4A",
-    marginBottom: 24,
-    lineHeight: 1.5,
-  },
-
-  alertError: {
-    padding: "14px 20px",
-    background: "rgba(204,34,34,0.06)",
-    border: "1px solid rgba(204,34,34,0.2)",
-    fontFamily: "var(--font-sans)",
-    fontSize: 13,
-    color: "#CC2222",
-    marginBottom: 24,
-    lineHeight: 1.5,
-  },
-
-  alertWarn: {
-    padding: "14px 20px",
-    background: "rgba(255,170,0,0.08)",
-    border: "1px solid rgba(255,170,0,0.3)",
-    fontFamily: "var(--font-mono)",
-    fontSize: 12,
-    color: "var(--text)",
-    marginBottom: 24,
-  },
-
-  alertInfo: {
-    padding: "12px 16px",
-    background: "rgba(11,11,11,0.04)",
-    border: "1px solid var(--border)",
-    fontFamily: "var(--font-sans)",
-    fontSize: 12,
-    color: "var(--text-muted)",
-    marginBottom: 20,
-    lineHeight: 1.6,
-  },
-
-  // ── Badges ──
-  badgeAmber: {
-    display: "inline-flex", alignItems: "center",
-    fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 600,
-    letterSpacing: "0.1em", textTransform: "uppercase",
-    color: "#92600A", background: "rgba(146,96,10,0.08)",
-    border: "1px solid rgba(146,96,10,0.2)",
-    padding: "4px 10px", borderRadius: 999,
-  },
-  badgeGreen: {
-    display: "inline-flex", alignItems: "center",
-    fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 600,
-    letterSpacing: "0.1em", textTransform: "uppercase",
-    color: "#1A7A4A", background: "rgba(26,122,74,0.08)",
-    border: "1px solid rgba(26,122,74,0.2)",
-    padding: "4px 10px", borderRadius: 999,
-  },
-  badgeRed: {
-    display: "inline-flex", alignItems: "center",
-    fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 600,
-    letterSpacing: "0.1em", textTransform: "uppercase",
-    color: "#CC2222", background: "rgba(204,34,34,0.08)",
-    border: "1px solid rgba(204,34,34,0.2)",
-    padding: "4px 10px", borderRadius: 999,
-  },
-  badgeBlue: {
-    display: "inline-flex", alignItems: "center",
-    fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 600,
-    letterSpacing: "0.1em", textTransform: "uppercase",
-    color: "#1A4A8A", background: "rgba(26,74,138,0.08)",
-    border: "1px solid rgba(26,74,138,0.2)",
-    padding: "4px 10px", borderRadius: 999,
-  },
-  badgePurple: {
-    display: "inline-flex", alignItems: "center",
-    fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 600,
-    letterSpacing: "0.1em", textTransform: "uppercase",
-    color: "#6B3FA0", background: "rgba(107,63,160,0.08)",
-    border: "1px solid rgba(107,63,160,0.2)",
-    padding: "4px 10px", borderRadius: 999,
-  },
-
-  // ── Empty state ──
-  emptyState: { textAlign: "center", padding: "48px 24px" },
-  emptyIcon:  { fontSize: 40, marginBottom: 16, opacity: 0.3 },
-  emptyText:  {
-    fontFamily: "var(--font-sans)", fontSize: 14,
-    color: "var(--text-muted)", marginBottom: 24,
-  },
-
-  // ── Proposal card ──
-  proposalCard: {
-    background: "var(--bg)",
-    border: "1px solid var(--border)",
-    padding: 24,
-    marginBottom: 16,
-  },
-
-  mono: {
-    fontFamily: "var(--font-mono)",
-    fontSize: 12,
-    color: "var(--text-muted)",
-  },
-
-  divider: {
-    borderTop: "1px solid var(--border)",
-    margin: "20px 0",
-  },
-};
-
-const STATUS_BADGE = [S.badgeAmber, S.badgeGreen, S.badgeRed, S.badgeBlue, S.badgePurple];
-
-// ─── Spinner ──────────────────────────────────────────────────────────────────
 function Spinner() {
   return (
     <span style={{
-      width: 16, height: 16,
-      borderRadius: "50%",
-      border: "2px solid rgba(0,0,0,0.08)",
-      borderTopColor: "currentColor",
+      width: 14, height: 14, borderRadius: "50%",
+      border: "2px solid rgba(255,255,255,0.3)",
+      borderTopColor: "#fff",
       display: "inline-block",
       animation: "spin 0.7s linear infinite",
       flexShrink: 0,
@@ -334,7 +32,6 @@ function Spinner() {
   );
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
 export default function DAOPage({ navigate }) {
   const { contracts, account, isConnected, shortAddress, formatToken } = useWeb3();
 
@@ -342,9 +39,8 @@ export default function DAOPage({ navigate }) {
   const [loading,   setLoading]   = useState(false);
   const [msg,       setMsg]       = useState(null);
   const [minStake,  setMinStake]  = useState("10");
-
-  const [dVin,  setDVin]  = useState("");
-  const [dDesc, setDDesc] = useState("");
+  const [dVin,      setDVin]      = useState("");
+  const [dDesc,     setDDesc]     = useState("");
 
   const showMsg = (type, text) => setMsg({ type, text });
 
@@ -358,30 +54,14 @@ export default function DAOPage({ navigate }) {
       const count = await contracts.disputeDAO.proposalCount();
       const ms    = await contracts.disputeDAO.MIN_STAKE();
       setMinStake(formatToken(ms));
-
       const all = [];
       for (let i = Number(count); i >= 1; i--) {
-        const p = await contracts.disputeDAO.getProposal(i);
+        const p      = await contracts.disputeDAO.getProposal(i);
         const myVote = await contracts.disputeDAO.getVote(i, account);
-        all.push({
-          id: p.id,
-          vin: p.vin,
-          proposer: p.proposer,
-          description: p.description,
-          stakedAmount: p.stakedAmount,
-          votesFor: p.votesFor,
-          votesAgainst: p.votesAgainst,
-          startTime: p.startTime,
-          endTime: p.endTime,
-          status: p.status,
-          rewardsDistributed: p.rewardsDistributed,
-          myVote,
-        });
+        all.push({ ...p, myVote });
       }
       setProposals(all);
-    } catch (err) {
-      console.error(err);
-    }
+    } catch (err) { console.error(err); }
     setLoading(false);
   };
 
@@ -396,23 +76,18 @@ export default function DAOPage({ navigate }) {
       showMsg("success", "Dispute raised! DAO voting period started (3 days).");
       setDVin(""); setDDesc("");
       await loadProposals();
-    } catch (err) {
-      showMsg("error", err.reason || err.message);
-    }
+    } catch (err) { showMsg("error", err.reason || err.message); }
     setLoading(false);
   };
 
   const handleVote = async (proposalId, inFavor) => {
-    setMsg(null);
-    setLoading(true);
+    setMsg(null); setLoading(true);
     try {
       const tx = await contracts.disputeDAO.vote(proposalId, inFavor);
       await tx.wait();
       showMsg("success", `Vote cast: ${inFavor ? "FOR ✓" : "AGAINST ✗"}`);
       await loadProposals();
-    } catch (err) {
-      showMsg("error", err.reason || err.message);
-    }
+    } catch (err) { showMsg("error", err.reason || err.message); }
     setLoading(false);
   };
 
@@ -423,9 +98,7 @@ export default function DAOPage({ navigate }) {
       await tx.wait();
       showMsg("success", "Proposal finalized!");
       await loadProposals();
-    } catch (err) {
-      showMsg("error", err.reason || err.message);
-    }
+    } catch (err) { showMsg("error", err.reason || err.message); }
     setLoading(false);
   };
 
@@ -436,9 +109,7 @@ export default function DAOPage({ navigate }) {
       await tx.wait();
       showMsg("success", "Rewards distributed to honest voters!");
       await loadProposals();
-    } catch (err) {
-      showMsg("error", err.reason || err.message);
-    }
+    } catch (err) { showMsg("error", err.reason || err.message); }
     setLoading(false);
   };
 
@@ -449,9 +120,7 @@ export default function DAOPage({ navigate }) {
       await tx.wait();
       showMsg("success", "Proposal executed!");
       await loadProposals();
-    } catch (err) {
-      showMsg("error", err.reason || err.message);
-    }
+    } catch (err) { showMsg("error", err.reason || err.message); }
     setLoading(false);
   };
 
@@ -472,35 +141,31 @@ export default function DAOPage({ navigate }) {
     };
   };
 
-  if (!isConnected) {
-    return (
-      <div style={{ padding: "48px 40px" }}>
-        <div style={S.alertWarn}>Connect MetaMask first.</div>
-      </div>
-    );
-  }
+  if (!isConnected) return (
+    <div style={S.alertWarnConnect}>
+      <div style={{ fontSize: 36, marginBottom: 12 }}>🔐</div>
+      Connect MetaMask to participate in governance.
+    </div>
+  );
 
   return (
     <div style={S.page}>
-
-      {/* ── Page Header ── */}
-      <div style={{ marginBottom: 40 }}>
-        <span style={S.microLabel}>Token-Weighted · Governance</span>
+      <div style={S.pageHeader}>
+        <span style={S.pageEyebrow}>Token-Weighted · Governance</span>
         <h1 style={S.pageTitle}>Dispute DAO</h1>
         <p style={S.pageSub}>Token-weighted governance for vehicle disputes</p>
       </div>
 
       {msg && (
         <div style={msg.type === "success" ? S.alertSuccess : S.alertError}>
-          {msg.text}
+          {msg.type === "success" ? "✓ " : "✕ "}{msg.text}
         </div>
       )}
 
       <div style={S.grid2}>
-
-        {/* ── Raise Dispute ── */}
+        {/* Raise Dispute */}
         <div style={S.card}>
-          <div style={S.cardTitle}>Raise Dispute</div>
+          <div style={S.cardTitle}>⚖ Raise Dispute</div>
           <div style={S.alertInfo}>
             ⓘ Requires {minStake} VCT staked. Go to Token Dashboard to stake first.
           </div>
@@ -508,7 +173,7 @@ export default function DAOPage({ navigate }) {
             <div style={S.formGroup}>
               <label style={S.label}>Vehicle VIN in Dispute</label>
               <input
-                style={S.input}
+                style={{ ...S.input, fontFamily: "var(--font-mono)", letterSpacing: "0.06em" }}
                 placeholder="1HGBH41JXMN109186"
                 value={dVin}
                 onChange={(e) => setDVin(e.target.value.toUpperCase())}
@@ -517,27 +182,27 @@ export default function DAOPage({ navigate }) {
             <div style={S.formGroup}>
               <label style={S.label}>Dispute Description</label>
               <textarea
-                style={S.textarea}
+                style={{ ...S.textarea, minHeight: 100 }}
                 rows={4}
-                placeholder="Describe the dispute in detail: e.g., ownership claim, fraudulent history record, incorrect VIN registration..."
+                placeholder="Describe the dispute: ownership claim, fraudulent record, incorrect VIN..."
                 value={dDesc}
                 onChange={(e) => setDDesc(e.target.value)}
               />
             </div>
             <button
               type="submit"
-              style={{ ...S.btnAccent, width: "100%", justifyContent: "center" }}
+              style={{ ...S.btnFullPrimary, opacity: loading ? 0.7 : 1 }}
               disabled={loading}
             >
-              {loading ? <><Spinner /> Processing…</> : "⚖ Raise Dispute (Stake 10 VCT)"}
+              {loading ? <><Spinner /> Processing…</> : `⚖ Raise Dispute (Stake ${minStake} VCT)`}
             </button>
           </form>
         </div>
 
-        {/* ── DAO Parameters ── */}
-        <div style={S.card}>
-          <div style={S.cardTitle}>DAO Parameters</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        {/* DAO Parameters */}
+        <div style={{ ...S.card, background: "var(--accent-light)", border: "1px solid var(--border-strong)" }}>
+          <div style={{ ...S.cardTitle, borderBottomColor: "var(--border-strong)" }}>📊 DAO Parameters</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {[
               ["Minimum Stake",         `${minStake} VCT`, S.badgeAmber],
               ["Voting Period",         "3 Days",          S.badgeBlue],
@@ -545,46 +210,48 @@ export default function DAOPage({ navigate }) {
               ["Wrong Vote Penalty",    "2 VCT burned",    S.badgeRed],
               ["Proposer Stake Return", "On PASS",         S.badgeGreen],
               ["Proposer Slash",        "On REJECT",       S.badgeRed],
-            ].map(([label, value, badgeStyle]) => (
-              <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontFamily: "var(--font-sans)", fontSize: 13, color: "var(--text-muted)" }}>
+            ].map(([label, value, style]) => (
+              <div key={label} style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                padding: "8px 0",
+                borderBottom: "1px solid var(--border)",
+              }}>
+                <span style={{ fontFamily: "var(--font-sans)", fontSize: 13, color: "var(--text-secondary)" }}>
                   {label}
                 </span>
-                <span style={badgeStyle}>{value}</span>
+                <span style={style}>{value}</span>
               </div>
             ))}
           </div>
-
-          <div style={S.divider} />
-
+          <div style={{ ...S.divider }} />
           <p style={{ ...S.mono, lineHeight: 1.7 }}>
             Voting weight = token balance at time of vote. One vote per address per proposal.
           </p>
         </div>
       </div>
 
-      {/* ── Proposals List ── */}
+      {/* Proposals */}
       <div style={S.card}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, paddingBottom: 14, borderBottom: "1px solid var(--border)" }}>
-          <span style={{ fontFamily: "var(--font-serif)", fontSize: 17, fontWeight: 700, color: "var(--text)" }}>
-            All Proposals ({proposals.length})
-          </span>
-          <button style={S.btnGhost} onClick={loadProposals} disabled={loading}>
-            {loading ? <Spinner /> : "↻ Refresh"}
+        <div style={{ ...S.cardTitle, justifyContent: "space-between" }}>
+          <span>🗳 All Proposals ({proposals.length})</span>
+          <button style={S.btnSecondary} onClick={loadProposals} disabled={loading}>
+            ↻ Refresh
           </button>
         </div>
 
         {loading ? (
           <div style={{ textAlign: "center", padding: "40px 0" }}>
-            <Spinner />
+            <div style={{ display: "inline-block", width: 24, height: 24, borderRadius: "50%", border: "3px solid var(--border-strong)", borderTopColor: "var(--accent)", animation: "spin 0.7s linear infinite" }} />
           </div>
         ) : proposals.length === 0 ? (
           <div style={S.emptyState}>
-            <div style={S.emptyIcon}>⚖</div>
+            <span style={S.emptyIcon}>⚖</span>
             <p style={S.emptyText}>No disputes raised yet</p>
           </div>
         ) : (
-          <div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {proposals.map((p) => {
               const { forPct, againstPct } = votePercent(p);
               const statusIdx  = Number(p.status);
@@ -593,14 +260,17 @@ export default function DAOPage({ navigate }) {
               const isProposer = p.proposer?.toLowerCase() === account?.toLowerCase();
 
               return (
-                <div key={p.id.toString()} style={S.proposalCard}>
-
-                  {/* ── Header row ── */}
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+                <div key={p.id.toString()} style={{
+                  padding: 22,
+                  background: "var(--bg)",
+                  border: "1px solid var(--border)",
+                  borderRadius: "var(--radius)",
+                }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
                     <div>
                       <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8, flexWrap: "wrap" }}>
                         <span style={S.mono}>#{p.id.toString()}</span>
-                        <span style={STATUS_BADGE[statusIdx]}>
+                        <span style={STATUS_BADGE_STYLES[statusIdx]}>
                           {STATUS_ICONS[statusIdx]} {STATUS_LABELS[statusIdx]}
                         </span>
                         {myVoted && (
@@ -609,41 +279,41 @@ export default function DAOPage({ navigate }) {
                           </span>
                         )}
                       </div>
-                      <div style={{ fontFamily: "var(--font-sans)", fontWeight: 700, fontSize: 15, marginBottom: 4, color: "var(--text)" }}>
+                      <div style={{ fontFamily: "var(--font-sans)", fontWeight: 700, fontSize: 14, marginBottom: 4, color: "var(--text)" }}>
                         VIN: {p.vin}
                       </div>
-                      <div style={{ fontFamily: "var(--font-sans)", fontSize: 13, color: "var(--text-muted)", lineHeight: 1.5 }}>
+                      <div style={{ fontFamily: "var(--font-sans)", fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.5 }}>
                         {p.description}
                       </div>
                     </div>
                     <div style={{ ...S.mono, textAlign: "right", flexShrink: 0, marginLeft: 16 }}>
                       <div>by {shortAddress(p.proposer)}</div>
-                      <div style={{ marginTop: 4, color: isActive ? "#92600A" : "var(--text-muted)" }}>
+                      <div style={{ marginTop: 4, color: isActive ? "var(--warning)" : "var(--text-muted)" }}>
                         {isActive ? timeLeft(p.endTime) : "Voting ended"}
                       </div>
                     </div>
                   </div>
 
-                  {/* ── Vote bars ── */}
-                  <div style={{ marginBottom: 16 }}>
+                  {/* Vote bars */}
+                  <div style={{ marginBottom: 14 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "#1A7A4A", fontWeight: 600 }}>
+                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--accent)", fontWeight: 600 }}>
                         ✓ FOR {forPct}%
                       </span>
-                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "#CC2222", fontWeight: 600 }}>
+                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--danger)", fontWeight: 600 }}>
                         {againstPct}% AGAINST ✗
                       </span>
                     </div>
-                    <div style={{ display: "flex", gap: 2, height: 4, background: "var(--border)", overflow: "hidden" }}>
-                      <div style={{ width: `${forPct}%`, background: "#1A7A4A" }} />
-                      <div style={{ width: `${againstPct}%`, background: "#CC2222" }} />
+                    <div style={{ display: "flex", height: 6, background: "var(--border)", borderRadius: 999, overflow: "hidden" }}>
+                      <div style={{ width: `${forPct}%`, background: "var(--accent)", borderRadius: 999, transition: "width 0.5s ease" }} />
+                      <div style={{ width: `${againstPct}%`, background: "var(--danger)", transition: "width 0.5s ease" }} />
                     </div>
-                    <div style={{ ...S.mono, marginTop: 6 }}>
+                    <div style={{ ...S.mono, marginTop: 5 }}>
                       {formatToken(p.votesFor)} VCT FOR · {formatToken(p.votesAgainst)} VCT AGAINST
                     </div>
                   </div>
 
-                  {/* ── Actions ── */}
+                  {/* Actions */}
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                     {isActive && !myVoted && !isProposer && (
                       <>
@@ -656,12 +326,12 @@ export default function DAOPage({ navigate }) {
                       </>
                     )}
                     {statusIdx === 0 && Date.now() >= Number(p.endTime) * 1000 && (
-                      <button style={S.btnAccent} disabled={loading} onClick={() => handleFinalize(p.id)}>
+                      <button style={S.btnPrimary} disabled={loading} onClick={() => handleFinalize(p.id)}>
                         Finalize Proposal
                       </button>
                     )}
                     {(statusIdx === 1 || statusIdx === 2) && !p.rewardsDistributed && (
-                      <button style={S.btnPrimary} disabled={loading} onClick={() => handleDistributeRewards(p.id)}>
+                      <button style={S.btnSecondary} disabled={loading} onClick={() => handleDistributeRewards(p.id)}>
                         Distribute Rewards
                       </button>
                     )}

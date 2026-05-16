@@ -3,23 +3,13 @@ import React from "react";
 import { useWeb3 } from "../utils/Web3Context";
 import { useTheme } from "../utils/ThemeContext";
 
-const NAV_ITEMS = [
-  { id: "dashboard", label: "Dashboard", icon: "⊞" },
-  { id: "register",  label: "Register",  icon: "＋" },
-  { id: "history",   label: "History",   icon: "📋" },
-  { id: "transfer",  label: "Transfer",  icon: "⇄"  },
-  { id: "theft",     label: "FIR",       icon: "🚨" },
-  { id: "dao",       label: "DAO",       icon: "⚖"  },
-  { id: "token",     label: "Tokens",    icon: "🪙" },
-];
-
 function Spinner() {
   return (
     <span style={{
-      width: 14, height: 14,
+      width: 13, height: 13,
       borderRadius: "50%",
-      border: "2px solid rgba(11,11,11,0.2)",
-      borderTopColor: "#0B0B0B",
+      border: "2px solid rgba(255,255,255,0.3)",
+      borderTopColor: "#fff",
       display: "inline-block",
       animation: "spin 0.7s linear infinite",
       flexShrink: 0,
@@ -27,211 +17,209 @@ function Spinner() {
   );
 }
 
-// ── Theme Toggle Button ────────────────────────────────────────────────────────
 function ThemeToggle() {
   const { theme, toggleTheme } = useTheme();
   const isDark = theme === "dark";
-
   return (
     <button
       onClick={toggleTheme}
-      aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
-      title={isDark ? "Light mode" : "Dark mode"}
+      aria-label={isDark ? "Switch to light" : "Switch to dark"}
       style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        width: 36,
-        height: 36,
+        width: 36, height: 36,
         borderRadius: "50%",
-        border: "1px solid rgba(255,255,255,0.15)",
-        background: "rgba(255,255,255,0.07)",
+        border: "1px solid var(--border-strong)",
+        background: "var(--accent-light)",
+        display: "flex", alignItems: "center", justifyContent: "center",
         cursor: "pointer",
-        color: "var(--text-inv)",
-        fontSize: 15,
+        color: "var(--accent)",
+        fontSize: 16,
         flexShrink: 0,
-        transition: "background 0.2s, border-color 0.2s, transform 0.2s",
+        transition: "all 0.2s",
         outline: "none",
-        // subtle spin on click via CSS — handled by key toggle below
       }}
-      onMouseEnter={e => {
-        e.currentTarget.style.background = "rgba(255,255,255,0.14)";
-        e.currentTarget.style.borderColor = "rgba(255,255,255,0.35)";
-      }}
-      onMouseLeave={e => {
-        e.currentTarget.style.background = "rgba(255,255,255,0.07)";
-        e.currentTarget.style.borderColor = "rgba(255,255,255,0.15)";
-      }}
+      onMouseEnter={e => { e.currentTarget.style.background = "var(--accent)"; e.currentTarget.style.color = "#fff"; e.currentTarget.style.borderColor = "var(--accent)"; }}
+      onMouseLeave={e => { e.currentTarget.style.background = "var(--accent-light)"; e.currentTarget.style.color = "var(--accent)"; e.currentTarget.style.borderColor = "var(--border-strong)"; }}
     >
-      {isDark ? "☀︎" : "☾"}
+      {isDark ? "☀" : "◑"}
     </button>
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-export default function Navbar({ navigate, currentPage }) {
-  const {
-    account, connectWallet, disconnectWallet,
-    isConnected, connecting, shortAddress, network,
-  } = useWeb3();
+export default function Navbar({ navigate, currentPage, onToggleSidebar, sidebarCollapsed }) {
+  const { account, connectWallet, disconnectWallet, isConnected, connecting, shortAddress, network } = useWeb3();
 
   return (
     <nav style={{
-      background: "var(--bg-inverted)",
-      borderBottom: "1px solid var(--border-inv)",
-      padding: "0 32px",
+      height: 60,
+      background: "var(--surface)",
+      borderBottom: "1px solid var(--border)",
       display: "flex",
       alignItems: "center",
-      height: 60,
+      padding: "0 20px 0 16px",
+      gap: 12,
       position: "sticky",
       top: 0,
-      zIndex: 100,
+      zIndex: 200,
+      boxShadow: "var(--shadow-sm)",
     }}>
+
+      {/* ── Sidebar Toggle ── */}
+      <button
+        onClick={onToggleSidebar}
+        aria-label="Toggle sidebar"
+        style={{
+          width: 36, height: 36,
+          borderRadius: "var(--radius-sm)",
+          border: "1px solid var(--border)",
+          background: "transparent",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          cursor: "pointer",
+          color: "var(--text-muted)",
+          fontSize: 14,
+          flexShrink: 0,
+          transition: "all 0.15s",
+          outline: "none",
+        }}
+        onMouseEnter={e => { e.currentTarget.style.background = "var(--accent-light)"; e.currentTarget.style.color = "var(--accent)"; e.currentTarget.style.borderColor = "var(--accent)"; }}
+        onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-muted)"; e.currentTarget.style.borderColor = "var(--border)"; }}
+      >
+        {sidebarCollapsed ? "▶" : "◀"}
+      </button>
 
       {/* ── Logo ── */}
       <button
         onClick={() => navigate("dashboard")}
         style={{
-          background: "transparent", border: "none", outline: "none",
-          fontFamily: "var(--font-mono)", fontWeight: 700, fontSize: 13,
-          color: "var(--accent)", textTransform: "uppercase",
-          letterSpacing: "0.18em", cursor: "pointer",
-          userSelect: "none", marginRight: 40, whiteSpace: "nowrap", padding: 0,
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          background: "transparent",
+          border: "none",
+          cursor: "pointer",
+          padding: "0 8px 0 0",
+          outline: "none",
         }}
       >
-        ▣ VehicleChain
+        <div style={{
+          width: 30, height: 30,
+          borderRadius: "var(--radius-sm)",
+          background: "linear-gradient(135deg, var(--accent), #15803d)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          flexShrink: 0,
+          boxShadow: "var(--shadow-green)",
+        }}>
+          <span style={{ color: "#fff", fontSize: 14, fontWeight: 700, fontFamily: "var(--font-mono)" }}>V</span>
+        </div>
+        <span style={{
+          fontFamily: "var(--font-mono)",
+          fontWeight: 700,
+          fontSize: 13,
+          color: "var(--text)",
+          letterSpacing: "0.08em",
+          textTransform: "uppercase",
+          whiteSpace: "nowrap",
+        }}>
+          VehicleChain
+        </span>
       </button>
 
-      {/* ── Nav Links ── */}
-      <div style={{ display: "flex", flex: 1, overflowX: "auto" }}>
-        {NAV_ITEMS.map((item) => {
-          const active = currentPage === item.id;
-          return (
-            <button
-              key={item.id}
-              onClick={() => navigate(item.id)}
-              style={{
-                background: "transparent",
-                border: "none",
-                borderBottom: active ? "2px solid var(--accent)" : "2px solid transparent",
-                outline: "none",
-                height: 60, padding: "0 14px",
-                whiteSpace: "nowrap", cursor: "pointer",
-                fontFamily: "var(--font-sans)", fontSize: 11,
-                fontWeight: active ? 600 : 400,
-                textTransform: "uppercase", letterSpacing: "0.08em",
-                color: active ? "var(--text-inv)" : "var(--text-inv-muted)",
-                transition: "color 0.15s, border-bottom-color 0.15s",
-              }}
-            >
-              <span style={{ marginRight: 6, fontSize: 11 }}>{item.icon}</span>
-              {item.label}
-            </button>
-          );
-        })}
-      </div>
+      {/* ── Spacer ── */}
+      <div style={{ flex: 1 }} />
 
-      {/* ── Wallet Area ── */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginLeft: 16 }}>
-
-        {/* Network badge */}
-        {isConnected && network && (
+      {/* ── Network badge ── */}
+      {isConnected && network && (
+        <span style={{
+          fontFamily: "var(--font-mono)",
+          fontSize: 10,
+          fontWeight: 600,
+          color: "var(--accent)",
+          background: "var(--accent-light)",
+          border: "1px solid var(--border-strong)",
+          padding: "4px 10px",
+          borderRadius: 999,
+          textTransform: "uppercase",
+          letterSpacing: "0.08em",
+          whiteSpace: "nowrap",
+          display: "flex",
+          alignItems: "center",
+          gap: 5,
+        }}>
           <span style={{
-            fontFamily: "var(--font-mono)", fontSize: 10, fontWeight: 600,
-            color: "var(--accent)",
-            background: "rgba(255,222,0,0.08)",
-            border: "1px solid rgba(255,222,0,0.25)",
-            padding: "4px 10px", borderRadius: 999,
-            textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap",
+            width: 6, height: 6, borderRadius: "50%",
+            background: "var(--accent)",
+            display: "inline-block",
+            animation: "pulse-green 2s infinite",
+          }} />
+          {network.name || `Chain ${network.chainId}`}
+        </span>
+      )}
+
+      {/* ── Wallet area ── */}
+      {isConnected ? (
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{
+            fontFamily: "var(--font-mono)",
+            fontSize: 11,
+            color: "var(--text-secondary)",
+            background: "var(--bg-secondary)",
+            border: "1px solid var(--border)",
+            padding: "6px 12px",
+            borderRadius: 999,
+            whiteSpace: "nowrap",
           }}>
-            ● {network.name || `Chain ${network.chainId}`}
+            {shortAddress(account)}
           </span>
-        )}
-
-        {isConnected ? (
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-
-            {/* Address pill */}
-            <span style={{
-              fontFamily: "var(--font-mono)", fontSize: 11,
-              color: "rgba(255,255,255,0.55)",
-              background: "rgba(255,255,255,0.06)",
-              border: "1px solid rgba(255,255,255,0.10)",
-              padding: "6px 14px", borderRadius: 999,
-              letterSpacing: "0.04em", whiteSpace: "nowrap",
-            }}>
-              {shortAddress(account)}
-            </span>
-
-            {/* Disconnect */}
-            <button
-              onClick={disconnectWallet}
-              onMouseEnter={e => {
-                e.currentTarget.style.borderColor = "rgba(255,255,255,0.5)";
-                e.currentTarget.style.color = "#FFFFFF";
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.borderColor = "rgba(255,255,255,0.20)";
-                e.currentTarget.style.color = "rgba(255,255,255,0.45)";
-              }}
-              style={{
-                background: "transparent",
-                border: "1px solid rgba(255,255,255,0.20)",
-                borderRadius: 999,
-                color: "rgba(255,255,255,0.45)",
-                fontFamily: "var(--font-sans)", fontSize: 10, fontWeight: 600,
-                textTransform: "uppercase", letterSpacing: "0.08em",
-                padding: "6px 16px", cursor: "pointer",
-                whiteSpace: "nowrap", transition: "border-color 0.15s, color 0.15s",
-              }}
-            >
-              Disconnect
-            </button>
-          </div>
-        ) : (
-
-          /* ── Connect CTA — yellow pill + black arrow badge ── */
           <button
-            onClick={connectWallet}
-            disabled={connecting}
+            onClick={disconnectWallet}
             style={{
-              display: "flex", alignItems: "center", gap: 10,
-              background: "var(--accent)",
-              border: "none", borderRadius: 999,
-              color: "var(--text)",
-              fontFamily: "var(--font-sans)", fontSize: 11, fontWeight: 700,
-              textTransform: "uppercase", letterSpacing: "0.08em",
-              padding: "8px 8px 8px 18px",
-              cursor: connecting ? "not-allowed" : "pointer",
-              opacity: connecting ? 0.5 : 1,
-              transition: "opacity 0.15s", whiteSpace: "nowrap",
+              padding: "6px 14px",
+              borderRadius: 999,
+              border: "1px solid var(--danger-border)",
+              background: "var(--danger-bg)",
+              color: "var(--danger)",
+              fontFamily: "var(--font-sans)",
+              fontSize: 11,
+              fontWeight: 600,
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+              transition: "all 0.15s",
             }}
+            onMouseEnter={e => { e.currentTarget.style.background = "var(--danger)"; e.currentTarget.style.color = "#fff"; e.currentTarget.style.borderColor = "var(--danger)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "var(--danger-bg)"; e.currentTarget.style.color = "var(--danger)"; e.currentTarget.style.borderColor = "var(--danger-border)"; }}
           >
-            {connecting ? (
-              <>
-                <Spinner />
-                <span>Connecting…</span>
-              </>
-            ) : (
-              <>
-                <span>Connect MetaMask</span>
-                <span style={{
-                  display: "inline-flex", alignItems: "center", justifyContent: "center",
-                  width: 26, height: 26,
-                  background: "var(--bg-inverted)",
-                  borderRadius: "50%",
-                  color: "var(--accent)", fontSize: 14,
-                  flexShrink: 0, lineHeight: 1,
-                }}>→</span>
-              </>
-            )}
+            Disconnect
           </button>
-        )}
+        </div>
+      ) : (
+        <button
+          onClick={connectWallet}
+          disabled={connecting}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "8px 18px",
+            borderRadius: 999,
+            border: "none",
+            background: "linear-gradient(135deg, var(--accent), #15803d)",
+            color: "#fff",
+            fontFamily: "var(--font-sans)",
+            fontSize: 12,
+            fontWeight: 600,
+            cursor: connecting ? "not-allowed" : "pointer",
+            opacity: connecting ? 0.7 : 1,
+            whiteSpace: "nowrap",
+            boxShadow: "var(--shadow-green)",
+            transition: "opacity 0.15s, transform 0.15s",
+          }}
+          onMouseEnter={e => { if (!connecting) e.currentTarget.style.transform = "translateY(-1px)"; }}
+          onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; }}
+        >
+          {connecting ? <><Spinner /> Connecting…</> : <>🦊 Connect Wallet</>}
+        </button>
+      )}
 
-        {/* ── Theme Toggle ── */}
-        <ThemeToggle />
-
-      </div>
+      <ThemeToggle />
     </nav>
   );
 }
