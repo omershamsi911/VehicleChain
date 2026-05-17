@@ -52,6 +52,7 @@ export function Web3Provider({ children }) {
       setAccount(_account);
       setNetwork(_network);
       setContracts(buildContracts(_signer));
+      
     } catch (err) {
       setError(err.message || "Failed to connect wallet");
     } finally {
@@ -103,6 +104,7 @@ export function Web3Provider({ children }) {
     return parseFloat(ethers.formatEther(wei)).toFixed(2);
   };
 
+  
   const parseToken = (amount) => ethers.parseEther(String(amount));
 
   return (

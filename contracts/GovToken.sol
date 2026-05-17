@@ -1,162 +1,170 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
+
 /**
- * @title GovToken
- * @dev ERC-20 Governance Token for Vehicle Chain DAO
- *      Used for staking disputes, voting power, and rewarding honest voters.
+ * @title GovToken (VCT)
+ * @dev ERC-20 Governance Token for VehicleChain DAO.
+ *
+ *      Roles:
+ *        DEFAULT_ADMIN_ROLE  — can grant/revoke roles (multisig in prod)
+ *        MINTER_ROLE         — can mint tokens (DisputeDAO for rewards)
+ *        BURNER_ROLE         — can burn tokens (DisputeDAO for penalties)
+ *        STAKING_MANAGER     — can slash staked balances (DisputeDAO)
+ *
+ *      Staking is tracked separately from balances so staked tokens
+ *      are non-transferable while locked.
  */
-contract GovToken {
+contract GovToken is ERC20, AccessControl {
+
     // ──────────────────────────────────────────────
-    //  State Variables
+    //  Roles
     // ──────────────────────────────────────────────
-    string public name     = "VehicleChain Token";
-    string public symbol   = "VCT";
-    uint8  public decimals = 18;
+    bytes32 public constant MINTER_ROLE      = keccak256("MINTER_ROLE");
+    bytes32 public constant BURNER_ROLE      = keccak256("BURNER_ROLE");
+    bytes32 public constant STAKING_MANAGER  = keccak256("STAKING_MANAGER");
 
-    uint256 public totalSupply;
+    // ──────────────────────────────────────────────
+    //  State
+    // ──────────────────────────────────────────────
 
-    address public admin;
-
-    mapping(address => uint256) private _balances;
-    mapping(address => mapping(address => uint256)) private _allowances;
-
-    // Track staked tokens per user (locked for DAO disputes)
+    // Staked balances are separate from liquid ERC-20 balance.
+    // Staked tokens are locked — cannot be transferred while staked.
     mapping(address => uint256) public stakedBalance;
 
     // ──────────────────────────────────────────────
-    //  Events  (ERC-20 standard + custom)
+    //  Events
     // ──────────────────────────────────────────────
-    event Transfer(address indexed from, address indexed to, uint256 value);
-    event Approval(address indexed owner, address indexed spender, uint256 value);
-    event Minted(address indexed to, uint256 amount);
-    event Burned(address indexed from, uint256 amount);
     event Staked(address indexed user, uint256 amount);
     event Unstaked(address indexed user, uint256 amount);
-
-    // ──────────────────────────────────────────────
-    //  Modifiers
-    // ──────────────────────────────────────────────
-    modifier onlyAdmin() {
-        require(msg.sender == admin, "GovToken: caller is not admin");
-        _;
-    }
+    event StakeSlashed(address indexed user, uint256 amount);
+    event Rewarded(address indexed user, uint256 amount);
+    event Burned(address indexed user, uint256 amount);
 
     // ──────────────────────────────────────────────
     //  Constructor
     // ──────────────────────────────────────────────
-    constructor(uint256 initialSupply) {
-        admin = msg.sender;
-        _mint(msg.sender, initialSupply * 10 ** uint256(decimals));
+    constructor(uint256 initialSupply) ERC20("VehicleChain Token", "VCT") {
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _grantRole(MINTER_ROLE,        msg.sender);
+        _grantRole(BURNER_ROLE,        msg.sender);
+        _grantRole(STAKING_MANAGER,    msg.sender);
+
+        // Mint initial supply to deployer (distribute to treasury / liquidity)
+        _mint(msg.sender, initialSupply * 10 ** decimals());
     }
 
     // ──────────────────────────────────────────────
-    //  ERC-20 Core
+    //  Minting / Burning  (role-gated)
     // ──────────────────────────────────────────────
 
-    function balanceOf(address account) external view returns (uint256) {
-        return _balances[account];
-    }
-
-    function transfer(address to, uint256 amount) external returns (bool) {
-        require(to != address(0), "GovToken: transfer to zero address");
-        require(_balances[msg.sender] >= amount, "GovToken: insufficient balance");
-        _transfer(msg.sender, to, amount);
-        return true;
-    }
-
-    function allowance(address owner, address spender) external view returns (uint256) {
-        return _allowances[owner][spender];
-    }
-
-    function approve(address spender, uint256 amount) external returns (bool) {
-        require(spender != address(0), "GovToken: approve to zero address");
-        _allowances[msg.sender][spender] = amount;
-        emit Approval(msg.sender, spender, amount);
-        return true;
-    }
-
-    function transferFrom(address from, address to, uint256 amount) external returns (bool) {
-        require(to != address(0), "GovToken: transfer to zero address");
-        require(_balances[from] >= amount, "GovToken: insufficient balance");
-        require(_allowances[from][msg.sender] >= amount, "GovToken: insufficient allowance");
-
-        _allowances[from][msg.sender] -= amount;
-        _transfer(from, to, amount);
-        return true;
-    }
-
-    // ──────────────────────────────────────────────
-    //  Admin Functions
-    // ──────────────────────────────────────────────
-
-    /// @notice Mint new tokens to any address (admin only)
-    function mint(address to, uint256 amount) external onlyAdmin {
+    /**
+     * @notice Mint tokens — only MINTER_ROLE (DisputeDAO for voter rewards).
+     *         Kept intentionally limited: DAO should mint conservatively.
+     */
+    function mint(address to, uint256 amount) external onlyRole(MINTER_ROLE) {
         require(to != address(0), "GovToken: mint to zero address");
-        require(amount > 0, "GovToken: amount must be > 0");
+        require(amount > 0,       "GovToken: zero amount");
         _mint(to, amount);
+        emit Rewarded(to, amount);
     }
 
-    /// @notice Burn tokens from an address (admin only, used by DAO for penalties)
-    function burn(address from, uint256 amount) external onlyAdmin {
-        require(_balances[from] >= amount, "GovToken: insufficient balance to burn");
-        _balances[from] -= amount;
-        totalSupply      -= amount;
+    /**
+     * @notice Burn tokens from an address — only BURNER_ROLE (DisputeDAO for penalties).
+     *         Can only burn from liquid balance, not staked balance.
+     */
+    function burn(address from, uint256 amount) external onlyRole(BURNER_ROLE) {
+        require(balanceOf(from) >= amount, "GovToken: insufficient liquid balance");
+        _burn(from, amount);
         emit Burned(from, amount);
-        emit Transfer(from, address(0), amount);
     }
 
     // ──────────────────────────────────────────────
-    //  Staking (used by DisputeDAO)
+    //  Staking
     // ──────────────────────────────────────────────
 
-    /// @notice Stake tokens to participate in DAO dispute filing
+    /**
+     * @notice Stake liquid VCT to qualify as a dispute proposer.
+     *         Staked tokens leave the ERC-20 balance and are locked.
+     */
     function stake(uint256 amount) external {
-        require(amount > 0, "GovToken: stake amount must be > 0");
-        require(_balances[msg.sender] >= amount, "GovToken: insufficient balance");
+        require(amount > 0,                    "GovToken: zero amount");
+        require(balanceOf(msg.sender) >= amount, "GovToken: insufficient balance");
 
-        _balances[msg.sender] -= amount;
-        stakedBalance[msg.sender] += amount;
+        _burn(msg.sender, amount);            // Remove from liquid supply
+        stakedBalance[msg.sender] += amount;  // Record in staked ledger
 
         emit Staked(msg.sender, amount);
     }
 
-    /// @notice Unstake tokens (only if not locked by active dispute)
+    /**
+     * @notice Unstake tokens back to liquid balance.
+     *         The DisputeDAO should enforce that tokens locked in an
+     *         active dispute cannot be unstaked (see DisputeDAO.raiseDispute lock).
+     */
     function unstake(uint256 amount) external {
-        require(stakedBalance[msg.sender] >= amount, "GovToken: insufficient staked balance");
+        require(stakedBalance[msg.sender] >= amount, "GovToken: insufficient staked");
+
         stakedBalance[msg.sender] -= amount;
-        _balances[msg.sender]     += amount;
+        _mint(msg.sender, amount);  // Return to liquid supply
+
         emit Unstaked(msg.sender, amount);
     }
 
-    /// @notice Slash staked tokens (called by DisputeDAO for losing proposers)
-    function slashStake(address user, uint256 amount) external onlyAdmin {
-        require(stakedBalance[user] >= amount, "GovToken: insufficient staked balance");
+    /**
+     * @notice Slash staked tokens from a losing proposer — STAKING_MANAGER only.
+     *         Slashed tokens are burned (removed from total supply).
+     */
+    function slashStake(address user, uint256 amount) external onlyRole(STAKING_MANAGER) {
+        require(stakedBalance[user] >= amount, "GovToken: insufficient staked to slash");
         stakedBalance[user] -= amount;
-        totalSupply          -= amount;
-        emit Burned(user, amount);
+        // Burned: not returned to circulation — deflationary pressure
+        emit StakeSlashed(user, amount);
     }
 
-    /// @notice Reward a user with newly minted tokens (called by DisputeDAO)
-    function reward(address to, uint256 amount) external onlyAdmin {
+    /**
+     * @notice Reward a user — convenience alias for DisputeDAO readability.
+     *         Mints new tokens; use sparingly (see tokenomics note in DisputeDAO).
+     */
+    function reward(address to, uint256 amount) external onlyRole(MINTER_ROLE) {
         require(to != address(0), "GovToken: reward to zero address");
         _mint(to, amount);
+        emit Rewarded(to, amount);
     }
 
     // ──────────────────────────────────────────────
-    //  Internal
+    //  Transfer Guard
+    //  Prevent transferring staked tokens — liquid balance only.
     // ──────────────────────────────────────────────
 
-    function _transfer(address from, address to, uint256 amount) internal {
-        _balances[from] -= amount;
-        _balances[to]   += amount;
-        emit Transfer(from, to, amount);
+    /**
+     * @dev Override to block transfers that would dip into staked tokens.
+     *      (Staked tokens are already burned from ERC-20 supply, so this is
+     *       a belt-and-suspenders check for accounting consistency.)
+     */
+    function _beforeTokenTransfer(
+        address from,
+        address /* to */,
+        uint256 amount
+    ) internal view override {
+        if (from == address(0)) return; // minting — always ok
+        // Liquid balance check: OZ ERC-20 already checks balanceOf,
+        // but we re-assert it here for clarity with the staking system.
+        require(
+            balanceOf(from) >= amount,
+            "GovToken: amount exceeds liquid balance"
+        );
     }
 
-    function _mint(address to, uint256 amount) internal {
-        _balances[to] += amount;
-        totalSupply    += amount;
-        emit Minted(to, amount);
-        emit Transfer(address(0), to, amount);
+    // ──────────────────────────────────────────────
+    //  ERC-165
+    // ──────────────────────────────────────────────
+    function supportsInterface(bytes4 interfaceId)
+        public view override(AccessControl)
+        returns (bool)
+    {
+        return super.supportsInterface(interfaceId);
     }
 }

@@ -1,6 +1,5 @@
 // src/pages/DAOPage.jsx
 import React, { useState, useEffect } from "react";
-import { ethers } from "ethers";
 import { useWeb3 } from "../utils/Web3Context";
 import S from "../styles/shared";
 
@@ -45,16 +44,40 @@ export default function DAOPage({ navigate }) {
   const showMsg = (type, text) => setMsg({ type, text });
 
   useEffect(() => {
-    if (isConnected && contracts.disputeDAO) loadProposals();
-  }, [isConnected, contracts]);
+    if (isConnected && contracts.disputeDAO && contracts.govToken) {
+      loadAll();
+    }
+  }, [isConnected, contracts, account]);
+
+  const loadAll = async () => {
+    setLoading(true);
+    try {
+      // Check validator status for connected wallet
+      const VALIDATOR_ROLE = await contracts.disputeDAO.VALIDATOR_ROLE();
+      const validatorStatus = await contracts.disputeDAO.hasRole(VALIDATOR_ROLE, account);
+      setIsValidator(validatorStatus);
+
+      // Load staked balance (needed to raise disputes)
+      const staked = await contracts.govToken.stakedBalance(account);
+      setStakedBal(formatToken(staked));
+
+      const ms = await contracts.disputeDAO.MIN_STAKE();
+      setMinStake(formatToken(ms));
+
+      await loadProposals();
+    } catch (err) {
+      console.error(err);
+    }
+    setLoading(false);
+  };
 
   const loadProposals = async () => {
-    setLoading(true);
     try {
       const count = await contracts.disputeDAO.proposalCount();
       const ms    = await contracts.disputeDAO.MIN_STAKE();
       setMinStake(formatToken(ms));
       const all = [];
+
       for (let i = Number(count); i >= 1; i--) {
         const p      = await contracts.disputeDAO.getProposal(i);
         const myVote = await contracts.disputeDAO.getVote(i, account);
@@ -68,12 +91,13 @@ export default function DAOPage({ navigate }) {
   const handleRaiseDispute = async (e) => {
     e.preventDefault();
     setMsg(null);
-    if (!dVin || !dDesc) return showMsg("error", "VIN and description required.");
+    if (!dVin || !dDesc) return showMsg("error", "VIN and description are required.");
+    if (!isValidator)     return showMsg("error", "Only whitelisted validators can raise disputes.");
     setLoading(true);
     try {
       const tx = await contracts.disputeDAO.raiseDispute(dVin.toUpperCase(), dDesc);
       await tx.wait();
-      showMsg("success", "Dispute raised! DAO voting period started (3 days).");
+      showMsg("success", "Dispute raised. Validator voting period started (3 days).");
       setDVin(""); setDDesc("");
       await loadProposals();
     } catch (err) { showMsg("error", err.reason || err.message); }
@@ -96,7 +120,7 @@ export default function DAOPage({ navigate }) {
     try {
       const tx = await contracts.disputeDAO.finalizeProposal(proposalId);
       await tx.wait();
-      showMsg("success", "Proposal finalized!");
+      showMsg("success", "Proposal finalized.");
       await loadProposals();
     } catch (err) { showMsg("error", err.reason || err.message); }
     setLoading(false);
@@ -107,7 +131,7 @@ export default function DAOPage({ navigate }) {
     try {
       const tx = await contracts.disputeDAO.distributeRewards(proposalId);
       await tx.wait();
-      showMsg("success", "Rewards distributed to honest voters!");
+      showMsg("success", "Rewards distributed to honest validators.");
       await loadProposals();
     } catch (err) { showMsg("error", err.reason || err.message); }
     setLoading(false);
@@ -118,7 +142,7 @@ export default function DAOPage({ navigate }) {
     try {
       const tx = await contracts.disputeDAO.executeProposal(proposalId);
       await tx.wait();
-      showMsg("success", "Proposal executed!");
+      showMsg("success", "Proposal executed.");
       await loadProposals();
     } catch (err) { showMsg("error", err.reason || err.message); }
     setLoading(false);
@@ -126,7 +150,7 @@ export default function DAOPage({ navigate }) {
 
   const timeLeft = (endTime) => {
     const diff = Number(endTime) * 1000 - Date.now();
-    if (diff <= 0) return "Ended";
+    if (diff <= 0) return "Voting ended";
     const hours = Math.floor(diff / 3600000);
     const mins  = Math.floor((diff % 3600000) / 60000);
     return `${hours}h ${mins}m remaining`;
@@ -259,6 +283,11 @@ export default function DAOPage({ navigate }) {
               const myVoted    = p.myVote?.weight > 0n;
               const isProposer = p.proposer?.toLowerCase() === account?.toLowerCase();
 
+              const snapshotTotal = formatToken(p.totalValidatorWeightSnapshot);
+              const myCapped      = isValidator && p.previewWeight
+                ? formatToken(p.previewWeight.capped)
+                : null;
+
               return (
                 <div key={p.id.toString()} style={{
                   padding: 22,
@@ -291,6 +320,11 @@ export default function DAOPage({ navigate }) {
                       <div style={{ marginTop: 4, color: isActive ? "var(--warning)" : "var(--text-muted)" }}>
                         {isActive ? timeLeft(p.endTime) : "Voting ended"}
                       </div>
+                      {myCapped && !myVoted && isActive && (
+                        <div style={{ marginTop: 4, color: "var(--green)" }}>
+                          Your capped weight: {myCapped} VCT
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -315,7 +349,7 @@ export default function DAOPage({ navigate }) {
 
                   {/* Actions */}
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    {isActive && !myVoted && !isProposer && (
+                    {isActive && !myVoted && !isProposer && isValidator && (
                       <>
                         <button style={S.btnSuccess} disabled={loading} onClick={() => handleVote(p.id, true)}>
                           ✓ Vote FOR
