@@ -5,7 +5,8 @@ import S from "../styles/shared";
 
 const RECORD_LABELS  = { 0: "SERVICE", 1: "ACCIDENT", 2: "MILEAGE" };
 const RECORD_ICONS   = { 0: "🔧", 1: "💥", 2: "📏" };
-const TRANSFER_STATUS = ["PENDING", "APPROVED", "CANCELLED", "COMPLETED"];
+// FIXED: Matched to OwnershipTransfer.sol -> enum TransferStatus { PENDING, COMPLETED, CANCELLED }
+const TRANSFER_STATUS = ["PENDING", "COMPLETED", "CANCELLED"];
 
 const DOT_COLOR = {
   blue:   "#1A4A8A",
@@ -50,14 +51,32 @@ export default function VehicleDetails({ vin: propVin, navigate }) {
     setLoading(true);
     setError("");
     try {
-      const v = await contracts.vehicleRegistry.getVehicle(targetVin);
-      setVehicle(v);
+      // 1. FIXED: Correctly call getVehicleByVIN
+      const vData = await contracts.vehicleRegistry.getVehicleByVIN(targetVin);
+      
+      // 2. FIXED: Unpack the nested tuple returned by the contract
+      setVehicle({
+        tokenId: vData.tokenId,
+        owner: vData.owner,
+        vin: vData.data.vin,
+        model: vData.data.model,
+        year: vData.data.year,
+        isStolen: vData.data.isStolen,
+        registeredAt: vData.data.registeredAt
+      });
 
-      const [hist, firList, txIds] = await Promise.all([
-        contracts.vehicleHistory.getHistory(targetVin),
-        contracts.theftReport.getAllFIRs(targetVin),
-        contracts.ownershipTransfer.getTransferHistory(targetVin),
-      ]);
+      // 3. Fetch secondary data safely
+      let hist = [];
+      try { hist = await contracts.vehicleHistory.getHistory(targetVin); } 
+      catch (e) { console.warn("No history or fetch failed"); }
+
+      let firList = [];
+      try { firList = await contracts.theftReport.getAllFIRs(targetVin); } 
+      catch (e) { console.warn("No FIRs or fetch failed"); }
+
+      let txIds = [];
+      try { txIds = await contracts.ownershipTransfer.getTransferHistory(targetVin); } 
+      catch (e) { console.warn("No transfers or fetch failed"); }
 
       setHistory([...hist].reverse());
       setFirs([...firList].reverse());
@@ -67,8 +86,12 @@ export default function VehicleDetails({ vin: propVin, navigate }) {
           txIds.map((id) => contracts.ownershipTransfer.getTransfer(id))
         );
         setTransfers([...txDetails].reverse());
+      } else {
+        setTransfers([]);
       }
+
     } catch (err) {
+      console.error("Lookup Error:", err);
       setError("Vehicle not found or not registered.");
       setVehicle(null);
     }
@@ -118,14 +141,9 @@ export default function VehicleDetails({ vin: propVin, navigate }) {
           {/* Stolen Banner */}
           {vehicle.isStolen && (
             <div style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 20,
-              padding: "20px 28px",
-              background: "var(--danger-bg)",
-              border: "1px solid var(--danger-border)",
-              borderRadius: "var(--radius-sm)",
-              marginBottom: 24,
+              display: "flex", alignItems: "center", gap: 20, padding: "20px 28px",
+              background: "var(--danger-bg)", border: "1px solid var(--danger-border)",
+              borderRadius: "var(--radius-sm)", marginBottom: 24,
             }}>
               <span style={{ fontSize: 32 }}>🚨</span>
               <div>
@@ -266,7 +284,7 @@ export default function VehicleDetails({ vin: propVin, navigate }) {
                   </thead>
                   <tbody>
                     {transfers.map((tx, i) => {
-                      const statusBadge = tx.status === 3n ? S.badgeGreen
+                      const statusBadge = tx.status === 1n ? S.badgeGreen
                                         : tx.status === 2n ? S.badgeRed
                                         : S.badgeAmber;
                       return (

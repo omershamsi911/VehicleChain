@@ -5,12 +5,12 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const ADDRESSES = {
-  GOV_TOKEN:          "0xB7f8BC63BbcaD18155201308C8f3540b07f84F5e",
-  VEHICLE_REGISTRY:   "0xA51c1fc2f0D1a1b8494Ed1FE312d7C3a78Ed91C0",
-  VEHICLE_HISTORY:    "0x0DCd1Bf9A1b36cE34237eEaFef220932846BCD82",
-  THEFT_REPORT:       "0x9A676e781A523b5d0C0e43731313A708CB607508",
-  OWNERSHIP_TRANSFER: "0x0B306BF915C4d645ff596e518fAf3F9669b97016",
-  DISPUTE_DAO:        "0x959922bE3CAee4b8Cd9a407cc3ac1C251C2007B1",
+  GOV_TOKEN:          "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+  VEHICLE_REGISTRY:   "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
+  VEHICLE_HISTORY:    "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
+  THEFT_REPORT:       "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9",
+  OWNERSHIP_TRANSFER: "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9",
+  DISPUTE_DAO:        "0x5FC8d32690cc91D4c39d9d3abcBD16989F875707",
 };
 
 
@@ -119,6 +119,7 @@ export const VEHICLE_REGISTRY_ABI = [
   "function isStolen(string vin) view returns (bool)",
   "function vehicleRegistered(string vin) view returns (bool)",
   "function totalVehicles() view returns (uint256)",
+  "function tokenOfOwnerByIndex(address owner, uint256 index) view returns (uint256)",
 
   // Events
   "event VehicleRegistered(uint256 indexed tokenId, string indexed vin, address indexed owner, string model, uint256 year)",
