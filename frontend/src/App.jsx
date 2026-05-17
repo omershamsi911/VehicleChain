@@ -15,6 +15,7 @@ import DAOPage from "./pages/DAOPage";
 import TokenPage from "./pages/TokenPage";
 import { AboutPage } from "./pages/AboutPage";
 import { HelpPage } from "./pages/HelpPage";
+import AdminPage from "./pages/AdminPage"
 import "./App.css";
 
 export default function App() {
@@ -40,6 +41,7 @@ export default function App() {
       case "token":     return <TokenPage       navigate={navigate} />;
       case "about":     return <AboutPage       navigate={navigate} />;
       case "help":      return <HelpPage        navigate={navigate} />;
+      case "admin":      return <AdminPage        navigate={navigate} />;
       default:          return <Dashboard       navigate={navigate} />;
     }
   };

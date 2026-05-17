@@ -13,6 +13,7 @@ const NAV_ITEMS = [
   { id: "token",     label: "Tokens",      icon: "🪙", group: "actions" },
   { id: "about",     label: "About",       icon: "ℹ",  group: "info" },
   { id: "help",      label: "Help",        icon: "?",  group: "info" },
+  { id: "admin",      label: "Admin",        icon: "?",  group: "actions" },
 ];
 
 const GROUP_LABELS = {

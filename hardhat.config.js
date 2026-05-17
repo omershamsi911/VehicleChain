@@ -12,11 +12,11 @@ module.exports = {
         runs: 200,
       },
     },
-    networks: {
-      sepolia: {
-        url: SEPOLIA_RPC_URL,
-        accounts: [`0x${PRIVATE_KEY}`],
-      },
+  },
+  networks: {
+    sepolia: {
+      url: SEPOLIA_RPC_URL,
+      accounts: [`0x${PRIVATE_KEY}`],
     },
   },
 };
