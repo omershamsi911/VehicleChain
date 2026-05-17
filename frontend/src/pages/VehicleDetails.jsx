@@ -157,7 +157,7 @@ export default function VehicleDetails({ vin: propVin, navigate }) {
                 <span style={S.label}>Current Owner</span>
                 <div style={{ fontFamily: "var(--font-mono)", fontSize: 14, color: "var(--text)", marginBottom: 16, wordBreak: "break-all" }}>
                   {vehicle.owner}
-                  {isOwner && <span style={S.badgeBlue} style={{ marginLeft: 8 }}>You</span>}
+                  {isOwner && <span style={S.badgeBlue}>You</span>}
                 </div>
 
                 <span style={S.label}>Registered</span>
